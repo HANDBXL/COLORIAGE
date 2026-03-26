@@ -1,0 +1,19 @@
+{
+  "name": "COLORIAGE — Livre de coloriage numérique",
+  "short_name": "Coloriage",
+  "description": "Application de coloriage numérique interactive par Jean-Charles Frémont",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f7f7",
+  "theme_color": "#1a1a1a",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["entertainment", "education"]
+}
