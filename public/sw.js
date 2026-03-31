@@ -1,4 +1,4 @@
-const CACHE_NAME = 'coloriage-v1';
+const CACHE_NAME = 'coloriage-v2';
 
 // Install: pre-cache the app shell
 self.addEventListener('install', (event) => {
@@ -26,39 +26,23 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch: network-first for navigation, cache-first for assets
+// Fetch: network-first for everything (avoids stale deployments)
 self.addEventListener('fetch', (event) => {
   const { request } = event;
 
   // Skip non-GET requests
   if (request.method !== 'GET') return;
 
-  // Navigation: network-first
-  if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          return response;
-        })
-        .catch(() => caches.match(request))
-    );
-    return;
-  }
-
-  // Assets: cache-first
   event.respondWith(
-    caches.match(request).then((cached) => {
-      if (cached) return cached;
-      return fetch(request).then((response) => {
-        // Cache successful responses for same-origin assets
+    fetch(request)
+      .then((response) => {
+        // Cache successful same-origin responses
         if (response.ok && request.url.startsWith(self.location.origin)) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
         }
         return response;
-      });
-    })
+      })
+      .catch(() => caches.match(request))
   );
 });

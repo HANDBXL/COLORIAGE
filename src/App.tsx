@@ -154,21 +154,15 @@ function PageEditor({ page, isActive, artist, onToolSelect, isDark, toggleDark, 
       flexDirection: 'row',
       width: '100%',
       height: '100%',
-      visibility: isActive ? 'visible' : 'hidden',
-      pointerEvents: isActive ? 'auto' : 'none',
-      opacity: isActive ? 1 : 0,
       position: 'absolute',
       inset: 0,
-      transition: 'opacity 0.2s ease',
-      zIndex: isActive ? 10 : 0
+      zIndex: 10
     }}
     role="tabpanel"
     aria-label={`Page de coloriage : ${page.title}`}
     aria-hidden={!isActive}
     >
-      {isActive && (
-        <>
-          <Toolbar
+      <Toolbar
             tool={drawLogic.tool}
             setTool={(t) => { drawLogic.setTool(t); if (t !== 'hand') onToolSelect?.(); }}
             undo={drawLogic.undo}
@@ -193,9 +187,7 @@ function PageEditor({ page, isActive, artist, onToolSelect, isDark, toggleDark, 
             setEraserWidth={drawLogic.setEraserWidth}
             eraserOpacity={drawLogic.eraserOpacity}
             setEraserOpacity={drawLogic.setEraserOpacity}
-          />
-        </>
-      )}
+      />
 
       <div className="canvas-container">
         <CanvasBoard imageSrc={page.url || ''} drawLogic={drawLogic} overlayMode={page.overlay} pageId={page.id} />
@@ -395,20 +387,18 @@ export default function App() {
         </div>
       </div>
 
-      {/* ── PAGE EDITORS ── */}
-      {PAGES.map((page, i) => (
-        <PageEditor
-          key={page.id}
-          page={page}
-          artist={ARTIST}
-          isActive={i === pageIndex}
-          onToolSelect={() => setShowNav(false)}
-          isDark={isDark}
-          toggleDark={toggleDark}
-          isColorBlind={isColorBlind}
-          toggleColorBlind={toggleColorBlind}
-        />
-      ))}
+      {/* ── PAGE EDITOR (single active page) ── */}
+      <PageEditor
+        key={PAGES[pageIndex].id}
+        page={PAGES[pageIndex]}
+        artist={ARTIST}
+        isActive={true}
+        onToolSelect={() => setShowNav(false)}
+        isDark={isDark}
+        toggleDark={toggleDark}
+        isColorBlind={isColorBlind}
+        toggleColorBlind={toggleColorBlind}
+      />
     </div>
   );
 }
