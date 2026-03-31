@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useDraw } from './hooks/useDraw';
 import { CanvasBoard } from './components/CanvasBoard';
 import { Toolbar } from './components/Toolbar';
@@ -12,20 +12,27 @@ import {
 import pagesData from './data/pages.json';
 
 // Overlay modes and types
-export type OverlayMode = 'full' | 'right-half' | 'none';
+export type OverlayMode = 'full' | 'right-half' | 'none' | 'split';
 
 interface PageData {
   id: string;
   title: string;
   image: string;
+  imageA?: string;
+  imageB?: string;
   overlay: OverlayMode;
   url?: string;
+  urlA?: string;
+  urlB?: string;
 }
 
-const PAGES: PageData[] = (pagesData as any[]).map(p => ({
-  ...p,
-  url: new URL(`./assets/illustrations/${p.image}`, import.meta.url).href
-}));
+const PAGES: PageData[] = (pagesData as any[]).map(p => {
+  const image = p.image || '';
+  const url = new URL(`./assets/illustrations/${image}`, import.meta.url).href;
+  const urlA = p.imageA ? new URL(`./assets/illustrations/${p.imageA}`, import.meta.url).href : undefined;
+  const urlB = p.imageB ? new URL(`./assets/illustrations/${p.imageB}`, import.meta.url).href : undefined;
+  return { ...p, url, urlA, urlB };
+});
 
 // Single Page Editor Instance
 function PageEditor({ page, isActive, artist, onToolSelect, isDark, toggleDark, isColorBlind, toggleColorBlind }: {
@@ -38,14 +45,27 @@ function PageEditor({ page, isActive, artist, onToolSelect, isDark, toggleDark, 
   isColorBlind?: boolean,
   toggleColorBlind?: () => void,
 }) {
+  const strokeDistanceRef = useRef(0);
+
   const drawLogic = useDraw({
     onDraw: (ctx, point, prevPoint) => {
+      if (prevPoint) {
+        strokeDistanceRef.current += Math.hypot(point.x - prevPoint.x, point.y - prevPoint.y);
+      }
+
       ctx.beginPath();
       ctx.moveTo(prevPoint?.x || point.x, prevPoint?.y || point.y);
       ctx.lineTo(point.x, point.y);
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      ctx.lineWidth = drawLogic.tool === 'eraser' ? drawLogic.eraserWidth : drawLogic.lineWidth;
+
+      // Dynamic line width for 'marker' (Brush 2)
+      let dynamicWidth = drawLogic.tool === 'eraser' ? drawLogic.eraserWidth : drawLogic.lineWidth;
+      if (drawLogic.tool === 'brush' && drawLogic.brushType === 'marker') {
+        const progress = Math.min(1, strokeDistanceRef.current / 400); // Thicker over 400px
+        dynamicWidth = drawLogic.lineWidth * (0.4 + 0.6 * progress);
+      }
+      ctx.lineWidth = dynamicWidth;
 
       if (drawLogic.tool === 'eraser') {
         ctx.strokeStyle = '#ffffff';
@@ -84,6 +104,12 @@ function PageEditor({ page, isActive, artist, onToolSelect, isDark, toggleDark, 
     }
   });
 
+  useEffect(() => {
+    if (!drawLogic.isDrawing) {
+      strokeDistanceRef.current = 0;
+    }
+  }, [drawLogic.isDrawing]);
+
   const exportCanvas = useCallback(() => {
     const canvas = drawLogic.canvasRef.current;
     if (!canvas) return;
@@ -108,7 +134,31 @@ function PageEditor({ page, isActive, artist, onToolSelect, isDark, toggleDark, 
       try {
         ctx.drawImage(canvas, 0, 0);
 
-        if (overlayImg) {
+        if (page.overlay === 'split' && page.urlB) {
+          // Mode split: A (overlayImg) à gauche 50% avec multiply
+          // B (urlB) à droite 50% avec normal
+          const imgB = new Image();
+          imgB.crossOrigin = 'anonymous';
+          await new Promise((resolve) => {
+            imgB.onload = resolve;
+            imgB.onerror = resolve;
+            imgB.src = page.urlB!;
+          });
+
+          const halfW = exportCvs.width / 2;
+
+          // Image A multiply à gauche
+          if (overlayImg) {
+            ctx.globalCompositeOperation = 'multiply';
+            ctx.drawImage(overlayImg, 0, 0, halfW, exportCvs.height);
+          }
+
+          // Image B normal à droite
+          ctx.globalCompositeOperation = 'source-over';
+          if (imgB.complete && imgB.naturalWidth > 0) {
+            ctx.drawImage(imgB, halfW, 0, halfW, exportCvs.height);
+          }
+        } else if (overlayImg) {
           ctx.globalCompositeOperation = 'multiply';
           ctx.drawImage(overlayImg, 0, 0, exportCvs.width, exportCvs.height);
           ctx.globalCompositeOperation = 'source-over';
@@ -190,7 +240,13 @@ function PageEditor({ page, isActive, artist, onToolSelect, isDark, toggleDark, 
       />
 
       <div className="canvas-container">
-        <CanvasBoard imageSrc={page.url || ''} drawLogic={drawLogic} overlayMode={page.overlay} pageId={page.id} />
+        <CanvasBoard
+          imageSrc={page.urlA || page.url || ''}
+          imageBSrc={page.urlB}
+          drawLogic={drawLogic}
+          overlayMode={page.overlay}
+          pageId={page.id}
+        />
       </div>
     </div>
   );

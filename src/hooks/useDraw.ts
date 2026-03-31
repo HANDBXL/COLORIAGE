@@ -353,6 +353,7 @@ export const useDraw = ({ onDraw }: UseDrawProps) => {
     }, []);
 
     return {
+        isDrawing,
         canvasRef,
         onInteractStart,
         onInteractMove,

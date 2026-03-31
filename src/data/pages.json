@@ -1,5 +1,5 @@
 [
-  { "id": "cover", "title": "Couverture", "image": "R5_Cover.png", "overlay": "none" },
+  { "id": "cover", "title": "Couverture", "image": "R5_cover.png", "overlay": "none" },
   { "id": "01", "title": "Planche 01", "image": "R5_01.png", "overlay": "none" },
   { "id": "02", "title": "Planche 02", "image": "R5_02.png", "overlay": "full" },
   { "id": "03", "title": "Planche 03", "image": "R5_03.png", "overlay": "full" },
@@ -16,5 +16,5 @@
   { "id": "14", "title": "Planche 14", "image": "R5_14.png", "overlay": "full" },
   { "id": "15", "title": "Planche 15", "image": "R5_15.png", "overlay": "full" },
   { "id": "16", "title": "Planche 16", "image": "R5_16.png", "overlay": "full" },
-  { "id": "17", "title": "Planche 17", "image": "R5_17.png", "overlay": "right-half" }
+  { "id": "17", "title": "Planche 17", "image": "R5_17.png", "imageA": "R5_17_A.png", "imageB": "R5_17_B.png", "overlay": "split" }
 ]

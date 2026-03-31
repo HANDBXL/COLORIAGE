@@ -7,16 +7,17 @@ import { loadCanvasData, createAutosaver } from '../utils/autosave';
  *  'right-half' = multiply overlay only on right 50% (for pages coloured on left)
  *  'none' = no overlay at all
  */
-type OverlayMode = 'full' | 'right-half' | 'none';
+type OverlayMode = 'full' | 'right-half' | 'none' | 'split';
 
 interface CanvasBoardProps {
     imageSrc?: string;
+    imageBSrc?: string;
     drawLogic: ReturnType<typeof useDraw>;
     overlayMode?: OverlayMode;
     pageId: string;
 }
 
-export const CanvasBoard: React.FC<CanvasBoardProps> = React.memo(({ imageSrc, drawLogic, overlayMode = 'full', pageId }) => {
+export const CanvasBoard: React.FC<CanvasBoardProps> = React.memo(({ imageSrc, imageBSrc, drawLogic, overlayMode = 'full', pageId }) => {
     const { canvasRef, onInteractStart, onInteractMove, onInteractEnd } = drawLogic;
     const [intrinsicSize, setIntrinsicSize] = useState({ width: 800, height: 600 });
     const [isImageReady, setIsImageReady] = useState(false);
@@ -54,8 +55,21 @@ export const CanvasBoard: React.FC<CanvasBoardProps> = React.memo(({ imageSrc, d
             img.crossOrigin = "anonymous";
             img.src = imageSrc;
             img.onload = async () => {
-                const baseW = img.naturalWidth || img.width || 1000;
-                const baseH = img.naturalHeight || img.height || 1000;
+                let baseW = img.naturalWidth || img.width || 1000;
+                let baseH = img.naturalHeight || img.height || 1000;
+
+                let imgB: HTMLImageElement | null = null;
+                if (overlayMode === 'split' && imageBSrc) {
+                    imgB = new Image();
+                    imgB.crossOrigin = "anonymous";
+                    imgB.src = imageBSrc;
+                    await new Promise((resolve) => {
+                        imgB!.onload = resolve;
+                        imgB!.onerror = resolve;
+                    });
+                    // On assume que B a la même taille que A, on double la largeur
+                    baseW = baseW * 2;
+                }
 
                 const upScale = Math.max(1, CANVAS_MIN_RESOLUTION / Math.max(baseW, baseH));
                 const imgW = Math.round(baseW * upScale);
@@ -65,7 +79,7 @@ export const CanvasBoard: React.FC<CanvasBoardProps> = React.memo(({ imageSrc, d
                 canvas.height = imgH;
                 setIntrinsicSize({ width: imgW, height: imgH });
 
-                // Try to restore autosaved data
+                // Essayer de restaurer les données sauvegardées
                 try {
                     const savedBlob = await loadCanvasData(pageId);
                     if (savedBlob) {
@@ -86,13 +100,23 @@ export const CanvasBoard: React.FC<CanvasBoardProps> = React.memo(({ imageSrc, d
                     } else {
                         ctx.fillStyle = '#ffffff';
                         ctx.fillRect(0, 0, canvas.width, canvas.height);
-                        ctx.drawImage(img, 0, 0, imgW, imgH);
+                        if (overlayMode === 'split' && imgB && imgB.complete && imgB.naturalWidth > 0) {
+                            // En mode split, on dessine le dessin A (blanc) à gauche et l'image B à droite sur le fond
+                            // Note: A est l'overlay multiply, donc le fond à gauche doit être blanc.
+                            ctx.drawImage(imgB, imgW / 2, 0, imgW / 2, imgH);
+                        } else {
+                            ctx.drawImage(img, 0, 0, imgW, imgH);
+                        }
                     }
                 } catch {
-                    // Fallback: draw normally
+                    // Fallback
                     ctx.fillStyle = '#ffffff';
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    ctx.drawImage(img, 0, 0, imgW, imgH);
+                    if (overlayMode === 'split' && imgB && imgB.complete && imgB.naturalWidth > 0) {
+                        ctx.drawImage(imgB, imgW / 2, 0, imgW / 2, imgH);
+                    } else {
+                        ctx.drawImage(img, 0, 0, imgW, imgH);
+                    }
                 }
 
                 drawLogic.saveHistory();
@@ -197,7 +221,7 @@ export const CanvasBoard: React.FC<CanvasBoardProps> = React.memo(({ imageSrc, d
                     onTouchEnd={onInteractEnd}
                     onTouchCancel={onInteractEnd}
                 />
-                {imageSrc && overlayMode !== 'none' && (
+                {imageSrc && (overlayMode === 'full' || overlayMode === 'right-half') && (
                     <img
                         src={imageSrc}
                         alt="Illustration de coloriage en superposition"
@@ -212,6 +236,40 @@ export const CanvasBoard: React.FC<CanvasBoardProps> = React.memo(({ imageSrc, d
                             clipPath: overlayMode === 'right-half' ? 'inset(0 0 0 50%)' : undefined,
                         }}
                     />
+                )}
+                {overlayMode === 'split' && (
+                    <>
+                        {imageSrc && (
+                            <img
+                                src={imageSrc}
+                                alt="Partie à colorier"
+                                style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    width: '50%',
+                                    height: '100%',
+                                    pointerEvents: 'none',
+                                    mixBlendMode: 'multiply',
+                                }}
+                            />
+                        )}
+                        {imageBSrc && (
+                            <img
+                                src={imageBSrc}
+                                alt="Partie à regarder"
+                                style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: '50%',
+                                    width: '50%',
+                                    height: '100%',
+                                    pointerEvents: 'none',
+                                    mixBlendMode: 'normal',
+                                }}
+                            />
+                        )}
+                    </>
                 )}
             </div>
         </div>
