@@ -186,8 +186,38 @@ export const CanvasBoard: React.FC<CanvasBoardProps> = React.memo(({ imageSrc, i
         }
     }, [drawLogic.tool, drawLogic.isSpacePanning, drawLogic.lineWidth, drawLogic.scale, drawLogic.color]);
 
+    // Reset ready state when image source changes to hide old content
+    useEffect(() => {
+        setIsImageReady(false);
+    }, [imageSrc, imageBSrc, pageId]);
+
     return (
-        <div className="canvas-wrapper" style={{ overflow: 'hidden', position: 'absolute', inset: 0 }} role="application" aria-label="Zone de dessin">
+        <div className="canvas-wrapper" style={{ overflow: 'hidden', position: 'absolute', inset: 0, backgroundColor: '#f5f5f5' }} role="application" aria-label="Zone de dessin">
+            {/* Loading Overlay */}
+            <div style={{
+                position: 'absolute',
+                inset: 0,
+                zIndex: 100,
+                backgroundColor: 'var(--bg-color, #ffffff)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'opacity 0.4s ease, visibility 0.4s',
+                opacity: isImageReady ? 0 : 1,
+                visibility: isImageReady ? 'hidden' : 'visible',
+                pointerEvents: 'none',
+            }}>
+                <div style={{
+                    width: '40px',
+                    height: '40px',
+                    border: '3px solid rgba(0,0,0,0.1)',
+                    borderTopColor: 'var(--accent-color, #000)',
+                    borderRadius: '50%',
+                    animation: 'spin 0.8s linear infinite',
+                }} />
+                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            </div>
+
             <div
                 className="document-paper"
                 style={{
@@ -198,7 +228,9 @@ export const CanvasBoard: React.FC<CanvasBoardProps> = React.memo(({ imageSrc, i
                     height: intrinsicSize.height,
                     transform: `translate(${drawLogic.panOffset.x}px, ${drawLogic.panOffset.y}px) scale(${drawLogic.scale})`,
                     transformOrigin: '0 0',
-                    backgroundColor: '#ffffff'
+                    backgroundColor: '#ffffff',
+                    transition: 'opacity 0.5s ease',
+                    opacity: isImageReady ? 1 : 0,
                 }}
             >
                 <canvas
