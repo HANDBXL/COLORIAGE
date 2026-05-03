@@ -1,0 +1,384 @@
+import { useState, useEffect, useRef, useCallback } from 'react';
+
+import AIR5_1 from '../assets/COVER AIR5/AIR5-01.png';
+import AIR5_2 from '../assets/COVER AIR5/AIR5-02.png';
+import AIR5_3 from '../assets/COVER AIR5/AIR5-03.png';
+import AIR5_4 from '../assets/COVER AIR5/AIR5-04.png';
+import AIR5_5 from '../assets/COVER AIR5/AIR5-05.png';
+import RAP_1 from '../assets/COVER RAP/RAP-01.jpeg';
+import RAP_2 from '../assets/COVER RAP/RAP-02.jpeg';
+import RAP_3 from '../assets/COVER RAP/RAP-03.jpeg';
+
+const AIR5_IMAGES = [AIR5_1, AIR5_2, AIR5_3, AIR5_4, AIR5_5];
+const RAP_IMAGES = [RAP_1, RAP_2, RAP_3];
+
+// ── CTA links ──
+const AIR5_CTA_URL: string | null = null;
+const RAP_CTA_URL: string | null = null;
+
+// Divider threshold beyond which a book is considered "chosen" → slideshow starts
+const CHOSEN_THRESHOLD = 0.64;
+const SLIDE_MS = 2500;
+
+const AIR5_TEXT = `« AIR 5 : LE MYTHE EN PIXELS.
+
+36 PAGES D'HISTOIRE,
+UNE PALETTE INFINIE SOUS LES DOIGTS.
+
+SUR CE CIRCUIT INTERACTIF,
+PLACEZ CLICS ET NUANCES,
+EN REVISITANT L'ICÔNE.
+
+DU CHÂSSIS CLASSIQUE
+AU DESIGN NUMÉRIQUE.
+
+CLIQUEZ, REDÉMARREZ, COLORIEZ ! »`;
+
+const RAP_TEXT = `« LE FLOW DEVIENT DIGITAL,
+LA RIME PREND DES COULEURS.
+
+SUR CES 4 MESURES INTERACTIVES,
+PLACEZ CLICS ET NUANCES,
+EN EXPLORANT VOS GAMMES VIRTUELLES.
+
+DU MULTISYLLABIQUE
+AU TACTILE MAGIQUE.
+
+CLIQUEZ, SWIPEZ, COLORIEZ ! »`;
+
+interface LandingPageProps {
+  onEnter: (edition: 'air5' | 'rap') => void;
+}
+
+export function LandingPage({ onEnter }: LandingPageProps) {
+  const [divider, setDivider] = useState(0.5);
+  const targetDivider = useRef(0.5);
+  const currentDivider = useRef(0.5);
+  const animRef = useRef<number | undefined>(undefined);
+
+  const [vpW, setVpW] = useState(() => window.innerWidth);
+  const [vpH, setVpH] = useState(() => window.innerHeight);
+
+  // Slideshow indices
+  const [air5Idx, setAir5Idx] = useState(0);
+  const [rapIdx, setRapIdx] = useState(0);
+  const air5SlideRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+  const rapSlideRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+
+  // Inject slide-fade keyframe once
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.id = 'landing-slide-anim';
+    style.textContent = '@keyframes slidefade{from{opacity:0}to{opacity:1}}.slide-img{animation:slidefade 0.55s ease forwards}';
+    document.head.appendChild(style);
+    return () => { document.getElementById('landing-slide-anim')?.remove(); };
+  }, []);
+
+  useEffect(() => {
+    const update = () => { setVpW(window.innerWidth); setVpH(window.innerHeight); };
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+
+  // RAF lerp
+  useEffect(() => {
+    const tick = () => {
+      const cur = currentDivider.current;
+      const next = cur + (targetDivider.current - cur) * 0.072;
+      if (Math.abs(next - cur) > 0.0003) {
+        currentDivider.current = next;
+        setDivider(next);
+      }
+      animRef.current = requestAnimationFrame(tick);
+    };
+    animRef.current = requestAnimationFrame(tick);
+    return () => { if (animRef.current !== undefined) cancelAnimationFrame(animRef.current); };
+  }, []);
+
+  // AIR5 slideshow: starts only when fully chosen
+  const air5Chosen = divider >= CHOSEN_THRESHOLD;
+  useEffect(() => {
+    if (!air5Chosen) {
+      clearInterval(air5SlideRef.current);
+      air5SlideRef.current = undefined;
+      setAir5Idx(0);
+      return;
+    }
+    air5SlideRef.current = setInterval(() => {
+      setAir5Idx(i => (i + 1) % AIR5_IMAGES.length);
+    }, SLIDE_MS);
+    return () => clearInterval(air5SlideRef.current);
+  }, [air5Chosen]);
+
+  // RAP slideshow: starts only when fully chosen
+  const rapChosen = divider <= (1 - CHOSEN_THRESHOLD);
+  useEffect(() => {
+    if (!rapChosen) {
+      clearInterval(rapSlideRef.current);
+      rapSlideRef.current = undefined;
+      setRapIdx(0);
+      return;
+    }
+    rapSlideRef.current = setInterval(() => {
+      setRapIdx(i => (i + 1) % RAP_IMAGES.length);
+    }, SLIDE_MS);
+    return () => clearInterval(rapSlideRef.current);
+  }, [rapChosen]);
+
+  // INVERTED tracking: mouse left → AIR5 grows (divider rises)
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const raw = 1 - (e.clientX - rect.left) / rect.width;
+    targetDivider.current = Math.max(0.32, Math.min(0.68, raw));
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    targetDivider.current = 0.5;
+  }, []);
+
+  const handleCta = useCallback((edition: 'air5' | 'rap') => {
+    const url = edition === 'air5' ? AIR5_CTA_URL : RAP_CTA_URL;
+    if (url) window.location.href = url;
+    else onEnter(edition);
+  }, [onEnter]);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.touches[0].clientX - rect.left;
+    targetDivider.current = x / rect.width < 0.5 ? 0.68 : 0.32;
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    // Removed automatic handleCta on touch end.
+    // The user must explicitly click the CTA button to enter the app.
+  }, []);
+
+  // ── Derived values ──
+
+  const midX = divider * vpW;
+  const diagOffset = Math.round(Math.min(vpH / (2 * Math.tan(65 * Math.PI / 180)), vpW * 0.20));
+
+  const lineX1 = midX + diagOffset; // top
+  const lineX2 = midX - diagOffset; // bottom
+
+  const air5Clip = `polygon(0px 0px, ${lineX1}px 0px, ${lineX2}px ${vpH}px, 0px ${vpH}px)`;
+  const rapClip  = `polygon(${lineX1}px 0px, ${vpW}px 0px, ${vpW}px ${vpH}px, ${lineX2}px ${vpH}px)`;
+
+  // Image opacity: 50% at rest → 100% active, 25% inactive (always slightly visible)
+  const air5ImgAlpha = Math.max(0.25, Math.min(1, 0.5 + (divider - 0.5) * 5));
+  const rapImgAlpha  = Math.max(0.25, Math.min(1, 0.5 + (0.5 - divider) * 5));
+
+  // Unified content alpha: text + CTA appear together on the ACTIVE/image side
+  const air5ContentAlpha = Math.max(0, Math.min(1, (divider - 0.5) * 5.5));
+  const rapContentAlpha  = Math.max(0, Math.min(1, (0.5 - divider) * 5.5));
+
+  // Title scale
+  const air5TitleScale = Math.max(0.82, Math.min(1.18, 0.82 + (divider - 0.32) * 1.0));
+  const rapTitleScale  = Math.max(0.82, Math.min(1.18, 0.82 + ((1 - divider) - 0.32) * 1.0));
+
+  // Hint
+  const hintAlpha = Math.max(0, 1 - Math.abs(divider - 0.5) * 10);
+
+  // Parallax
+  const air5ShiftX = (divider - 0.5) * 32;
+  const rapShiftX  = (0.5 - divider) * 32;
+
+  // ── Shared styles ──
+
+  const gradientOverlay: React.CSSProperties = {
+    position: 'absolute', inset: 0,
+    background: 'linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.45) 50%, rgba(0,0,0,0.90) 100%)',
+    zIndex: 1, pointerEvents: 'none',
+  };
+
+  const infoBlock: React.CSSProperties = {
+    background: 'white',
+    border: '2px solid #0a0a0a',
+    padding: '0.9rem 1.1rem',
+    maxWidth: 'min(380px, 75vw)',
+  };
+
+  const ctaBtn: React.CSSProperties = {
+    background: '#0a0a0a', color: 'white',
+    border: '2px solid #0a0a0a',
+    padding: '0.75rem 1.4rem',
+    fontFamily: 'var(--font-family)',
+    fontSize: '0.65rem', fontWeight: 800,
+    letterSpacing: '0.14em', textTransform: 'uppercase' as const,
+    cursor: 'pointer', marginTop: '0.75rem',
+    display: 'flex', alignItems: 'center', gap: '0.5rem',
+  };
+
+  const textStyle: React.CSSProperties = {
+    fontSize: 'clamp(0.52rem, 0.78vw, 0.65rem)',
+    fontWeight: 600, letterSpacing: '0.06em',
+    textTransform: 'uppercase', lineHeight: 1.9,
+    whiteSpace: 'pre-line', color: '#0a0a0a',
+    margin: 0,
+  };
+
+  return (
+    <div
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      role="main"
+      aria-label="Choisissez votre édition de coloriage"
+      style={{
+        position: 'fixed', inset: 0,
+        background: '#0a0a0a',
+        overflow: 'hidden',
+        fontFamily: 'var(--font-family)',
+        userSelect: 'none',
+      }}
+    >
+      {/* ══ PANNEAU AIR 5 (gauche) ══ */}
+      <div style={{ position: 'absolute', inset: 0, clipPath: air5Clip }}>
+
+        <div style={{ position: 'absolute', inset: 0, opacity: air5ImgAlpha, transition: 'none' }}>
+          <img
+            key={air5Idx}
+            src={AIR5_IMAGES[air5Idx]}
+            alt="" aria-hidden="true"
+            className="slide-img"
+            style={{
+              position: 'absolute', inset: 0, width: '100%', height: '100%',
+              objectFit: 'cover', objectPosition: 'center',
+              transform: `translateX(${air5ShiftX}px) scale(1.06)`,
+              pointerEvents: 'none',
+            }}
+          />
+        </div>
+
+        <div style={gradientOverlay} />
+
+        {/* Titre AIR 5 */}
+        <div style={{
+          position: 'absolute', top: '2.5rem', left: '2.5rem', zIndex: 3,
+          color: 'white', pointerEvents: 'none',
+          transform: `scale(${air5TitleScale})`, transformOrigin: 'left top',
+          transition: 'transform 0.35s ease',
+        }}>
+          <span style={{ display: 'block', fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', opacity: 0.55, marginBottom: '0.3rem' }}>
+            Édition
+          </span>
+          <h2 style={{ fontSize: 'clamp(1.8rem, 3.5vw, 3rem)', fontWeight: 900, letterSpacing: '-0.02em', textTransform: 'uppercase', lineHeight: 0.95, color: 'white', margin: 0 }}>
+            AIR 5
+          </h2>
+        </div>
+
+        {/* Bloc texte + CTA AIR 5 — centré verticalement à gauche */}
+        <div style={{
+          position: 'absolute', top: '50%', left: '2.5rem', zIndex: 3,
+          opacity: air5ContentAlpha,
+          transform: `translateY(calc(-50% + ${(1 - air5ContentAlpha) * -14}px))`,
+          transition: 'opacity 0.4s ease, transform 0.4s ease',
+          pointerEvents: air5ContentAlpha > 0.4 ? 'auto' : 'none',
+        }}>
+          <div style={infoBlock}>
+            <p style={textStyle}>{AIR5_TEXT}</p>
+            <button
+              onClick={() => handleCta('air5')}
+              tabIndex={air5ContentAlpha > 0.4 ? 0 : -1}
+              aria-label="Ouvrir l'édition AIR 5"
+              style={ctaBtn}
+            >
+              COLORIER AIR 5 <span aria-hidden="true">→</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ══ PANNEAU RAP (droite) ══ */}
+      <div style={{ position: 'absolute', inset: 0, clipPath: rapClip }}>
+
+        <div style={{ position: 'absolute', inset: 0, opacity: rapImgAlpha, transition: 'none' }}>
+          <img
+            key={rapIdx}
+            src={RAP_IMAGES[rapIdx]}
+            alt="" aria-hidden="true"
+            className="slide-img"
+            style={{
+              position: 'absolute', inset: 0, width: '100%', height: '100%',
+              objectFit: 'cover', objectPosition: 'center',
+              transform: `translateX(${rapShiftX}px) scale(1.06)`,
+              pointerEvents: 'none',
+            }}
+          />
+        </div>
+
+        <div style={gradientOverlay} />
+
+        {/* Titre RAP */}
+        <div style={{
+          position: 'absolute', top: '2.5rem', right: '2.5rem', zIndex: 3,
+          color: 'white', textAlign: 'right', pointerEvents: 'none',
+          transform: `scale(${rapTitleScale})`, transformOrigin: 'right top',
+          transition: 'transform 0.35s ease',
+        }}>
+          <span style={{ display: 'block', fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', opacity: 0.55, marginBottom: '0.3rem' }}>
+            Édition
+          </span>
+          <h2 style={{ fontSize: 'clamp(1.8rem, 3.5vw, 3rem)', fontWeight: 900, letterSpacing: '-0.02em', textTransform: 'uppercase', lineHeight: 0.95, color: 'white', margin: 0 }}>
+            RAP
+          </h2>
+        </div>
+
+        {/* Bloc texte + CTA RAP — centré verticalement à droite */}
+        <div style={{
+          position: 'absolute', top: '50%', right: '2.5rem', zIndex: 3,
+          opacity: rapContentAlpha,
+          transform: `translateY(calc(-50% + ${(1 - rapContentAlpha) * 14}px))`,
+          transition: 'opacity 0.4s ease, transform 0.4s ease',
+          pointerEvents: rapContentAlpha > 0.4 ? 'auto' : 'none',
+          display: 'flex', flexDirection: 'column', alignItems: 'flex-end',
+        }}>
+          <div style={{ ...infoBlock, textAlign: 'right' }}>
+            <p style={textStyle}>{RAP_TEXT}</p>
+            <button
+              onClick={() => handleCta('rap')}
+              tabIndex={rapContentAlpha > 0.4 ? 0 : -1}
+              aria-label="Ouvrir l'édition RAP"
+              style={{ ...ctaBtn, marginLeft: 'auto' }}
+            >
+              <span aria-hidden="true">←</span> COLORIER RAP
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ══ LIGNE DIAGONALE ══ */}
+      <svg
+        aria-hidden="true"
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', zIndex: 10, pointerEvents: 'none', overflow: 'visible' }}
+      >
+        <line
+          x1={lineX1} y1={0}
+          x2={lineX2} y2={vpH}
+          stroke={`rgba(255,255,255,${0.18 + hintAlpha * 0.45})`}
+          strokeWidth="1"
+        />
+      </svg>
+
+      {/* ══ HINT CENTRAL ══ */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          top: '50%',
+          left: `${divider * 100}%`,
+          transform: 'translate(-50%, -50%)',
+          zIndex: 20, pointerEvents: 'none',
+          color: 'white', textAlign: 'center',
+          opacity: hintAlpha,
+          whiteSpace: 'nowrap',
+        }}
+      >
+        <span style={{ fontSize: '0.56rem', fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', opacity: 0.7 }}>
+          ← DÉPLACEZ →
+        </span>
+      </div>
+    </div>
+  );
+}

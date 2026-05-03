@@ -1,5 +1,5 @@
 [
-  { "id": "cover", "title": "Couverture", "image": "R5_cover.png", "overlay": "none" },
+
   { "id": "01", "title": "Planche 01", "image": "R5_01.png", "overlay": "none" },
   { "id": "02", "title": "Planche 02", "image": "R5_02.png", "overlay": "full" },
   { "id": "03", "title": "Planche 03", "image": "R5_03.png", "overlay": "full" },

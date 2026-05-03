@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useDraw } from './hooks/useDraw';
 import { CanvasBoard } from './components/CanvasBoard';
 import { Toolbar } from './components/Toolbar';
-import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LandingPage } from './components/LandingPage';
+import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-react';
 import {
   ARTIST,
   MARKER_ALPHA_FACTOR, WATERCOLOR_ALPHA_FACTOR, WATERCOLOR_SHADOW_BLUR, NEON_SHADOW_BLUR,
@@ -10,6 +11,7 @@ import {
 } from './constants';
 
 import pagesData from './data/pages.json';
+import rapPages from './data/rapPages.json';
 
 // Overlay modes and types
 export type OverlayMode = 'full' | 'right-half' | 'none' | 'split';
@@ -17,7 +19,7 @@ export type OverlayMode = 'full' | 'right-half' | 'none' | 'split';
 interface PageData {
   id: string;
   title: string;
-  image: string;
+  image?: string;
   imageA?: string;
   imageB?: string;
   overlay: OverlayMode;
@@ -32,6 +34,14 @@ const PAGES: PageData[] = (pagesData as any[]).map(p => {
   const urlA = p.imageA ? new URL(`./assets/illustrations/${p.imageA}`, import.meta.url).href : undefined;
   const urlB = p.imageB ? new URL(`./assets/illustrations/${p.imageB}`, import.meta.url).href : undefined;
   return { ...p, url, urlA, urlB };
+});
+
+// Build full URLs for RAP pages (double‑page layout)
+const RAP_PAGES: PageData[] = (rapPages as any[]).map(p => {
+  const urlA = p.imageA ? new URL(`./assets/illustrations-RAP/${p.imageA}`, import.meta.url).href : undefined;
+  const urlB = p.imageB ? new URL(`./assets/illustrations-RAP/${p.imageB}`, import.meta.url).href : undefined;
+  // rapPages objects may not have a primary 'image' field; we keep url undefined
+  return { ...p, url: undefined, urlA, urlB };
 });
 
 // Single Page Editor Instance
@@ -253,10 +263,21 @@ function PageEditor({ page, isActive, artist, onToolSelect, isDark, toggleDark, 
 }
 
 export default function App() {
+  const [edition, setEdition] = useState<'air5' | 'rap' | null>(null);
+  const [showLanding, setShowLanding] = useState(true);
   const [pageIndex, setPageIndex] = useState(0);
   const [showNav, setShowNav] = useState(true);
   const [isDark, setIsDark] = useState(false);
   const [isColorBlind, setIsColorBlind] = useState(false);
+
+  // Load appropriate pages based on selected edition
+  const pages = edition === 'rap' ? RAP_PAGES : PAGES;
+
+  const handleEnterEdition = useCallback((_edition: 'air5' | 'rap') => {
+    setEdition(_edition);
+    setShowLanding(false);
+    setPageIndex(0);
+  }, []);
 
   useEffect(() => {
     document.body.classList.toggle('dark', isDark);
@@ -274,15 +295,19 @@ export default function App() {
         setPageIndex(i => Math.max(0, i - 1));
       } else if (e.key === 'ArrowRight' || e.key === 'PageDown') {
         e.preventDefault();
-        setPageIndex(i => Math.min(PAGES.length - 1, i + 1));
+        setPageIndex(i => Math.min(pages.length - 1, i + 1));
       }
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, []);
+  }, [pages.length]);
 
   const toggleDark = useCallback(() => setIsDark(v => !v), []);
   const toggleColorBlind = useCallback(() => setIsColorBlind(v => !v), []);
+
+  if (showLanding) {
+    return <LandingPage onEnter={handleEnterEdition} />;
+  }
 
   return (
     <div className="app-container" role="main" aria-label="Application de coloriage">
@@ -295,13 +320,39 @@ export default function App() {
         </defs>
       </svg>
 
+      {/* ── BACK BUTTON ── */}
+      <button
+        onClick={() => { setShowLanding(true); setEdition(null); setPageIndex(0); }}
+        className="tool-btn"
+        aria-label="Retour à l'accueil"
+        title="Retour à l'accueil"
+        style={{
+          position: 'fixed', top: '1.25rem', left: '1.25rem',
+          zIndex: 500,
+          border: '1px solid var(--panel-border)',
+          background: 'var(--panel-bg)',
+          cursor: 'pointer',
+          height: '36px',
+          width: 'auto',
+          padding: '0 12px',
+          borderRadius: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+          color: 'var(--text-secondary)',
+          boxShadow: '2px 2px 0 rgba(0,0,0,0.08)',
+          fontWeight: 600, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase',
+          transition: 'all 0.2s ease',
+        }}
+      >
+        <ArrowLeft size={16} /> Retour
+      </button>
+
       {/* ── CONSTANT TOGGLE BUTTON ── */}
       <button
         onClick={() => setShowNav(!showNav)}
         className="tool-btn"
         aria-expanded={showNav}
         aria-controls="planches-panel"
-        aria-label={showNav ? `Masquer les planches — page actuelle : ${PAGES[pageIndex].title}` : `Afficher les planches — page actuelle : ${PAGES[pageIndex].title}`}
+        aria-label={showNav ? `Masquer les planches — page actuelle : ${pages[pageIndex].title}` : `Afficher les planches — page actuelle : ${pages[pageIndex].title}`}
         style={{
           position: 'fixed', top: '1.25rem', left: '50%', transform: 'translateX(-50%)',
           zIndex: 500,
@@ -320,7 +371,7 @@ export default function App() {
         }}
         title={showNav ? "Masquer les planches" : "Afficher les planches"}
       >
-        {PAGES[pageIndex].title}
+        {pages[pageIndex].title}
         {showNav ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
       </button>
 
@@ -381,7 +432,7 @@ export default function App() {
             role="tablist"
             aria-label="Sélection de page"
           >
-            {PAGES.map((page, i) => (
+            {pages.map((page, i) => (
               <div
                 key={page.id}
                 onClick={() => setPageIndex(i)}
@@ -411,19 +462,43 @@ export default function App() {
               >
                 <div style={{
                   width: '100%', height: '100%',
-                  backgroundImage: `url("${page.url}")`,
-                  backgroundSize: 'contain',
-                  backgroundPosition: 'center',
-                  backgroundRepeat: 'no-repeat',
-                }} />
+                  display: 'flex',
+                }}>
+                  {page.overlay === 'split' && page.urlA && page.urlB ? (
+                    <>
+                      <div style={{
+                        flex: 1,
+                        backgroundImage: `url(${page.urlA})`,
+                        backgroundSize: 'contain',
+                        backgroundPosition: 'right',
+                        backgroundRepeat: 'no-repeat',
+                      }} />
+                      <div style={{
+                        flex: 1,
+                        backgroundImage: `url(${page.urlB})`,
+                        backgroundSize: 'contain',
+                        backgroundPosition: 'left',
+                        backgroundRepeat: 'no-repeat',
+                      }} />
+                    </>
+                  ) : (
+                    <div style={{
+                      width: '100%', height: '100%',
+                      backgroundImage: `url(${page.url || page.urlA})`,
+                      backgroundSize: 'contain',
+                      backgroundPosition: 'center',
+                      backgroundRepeat: 'no-repeat',
+                    }} />
+                  )}
+                </div>
               </div>
             ))}
           </div>
 
           {/* → Next */}
           <button
-            onClick={() => setPageIndex(i => Math.min(PAGES.length - 1, i + 1))}
-            disabled={pageIndex === PAGES.length - 1}
+            onClick={() => setPageIndex(i => Math.min(pages.length - 1, i + 1))}
+            disabled={pageIndex === pages.length - 1}
             className="tool-btn"
             aria-label="Page suivante"
             style={{
@@ -431,7 +506,7 @@ export default function App() {
               border: 'none',
               background: 'transparent', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              opacity: pageIndex === PAGES.length - 1 ? 0.3 : 1,
+              opacity: pageIndex === pages.length - 1 ? 0.3 : 1,
               transition: 'opacity 0.15s', color: 'var(--text-primary)',
               borderRadius: 0,
               marginLeft: '0.25rem'
@@ -445,8 +520,8 @@ export default function App() {
 
       {/* ── PAGE EDITOR (single active page) ── */}
       <PageEditor
-        key={PAGES[pageIndex].id}
-        page={PAGES[pageIndex]}
+        key={pages[pageIndex].id}
+        page={pages[pageIndex]}
         artist={ARTIST}
         isActive={true}
         onToolSelect={() => setShowNav(false)}

@@ -265,7 +265,7 @@ export const CanvasBoard: React.FC<CanvasBoardProps> = React.memo(({ imageSrc, i
                                     width: '50%',
                                     height: '100%',
                                     pointerEvents: 'none',
-                                    mixBlendMode: 'normal',
+                                    mixBlendMode: 'multiply',
                                 }}
                             />
                         )}
