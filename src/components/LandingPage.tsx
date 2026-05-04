@@ -12,11 +12,10 @@ import RAP_3 from '../assets/COVER RAP/RAP-03.jpeg';
 const AIR5_IMAGES = [AIR5_1, AIR5_2, AIR5_3, AIR5_4, AIR5_5];
 const RAP_IMAGES = [RAP_1, RAP_2, RAP_3];
 
-// ── CTA links ──
 const AIR5_CTA_URL: string | null = null;
 const RAP_CTA_URL: string | null = null;
 
-// Divider threshold beyond which a book is considered "chosen" → slideshow starts
+const MOBILE_BP = 640;
 const CHOSEN_THRESHOLD = 0.64;
 const SLIDE_MS = 2500;
 
@@ -59,13 +58,13 @@ export function LandingPage({ onEnter }: LandingPageProps) {
   const [vpW, setVpW] = useState(() => window.innerWidth);
   const [vpH, setVpH] = useState(() => window.innerHeight);
 
-  // Slideshow indices
+  const isMobile = vpW < MOBILE_BP;
+
   const [air5Idx, setAir5Idx] = useState(0);
   const [rapIdx, setRapIdx] = useState(0);
   const air5SlideRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   const rapSlideRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
-  // Inject slide-fade keyframe once
   useEffect(() => {
     const style = document.createElement('style');
     style.id = 'landing-slide-anim';
@@ -80,7 +79,6 @@ export function LandingPage({ onEnter }: LandingPageProps) {
     return () => window.removeEventListener('resize', update);
   }, []);
 
-  // RAF lerp
   useEffect(() => {
     const tick = () => {
       const cur = currentDivider.current;
@@ -95,7 +93,6 @@ export function LandingPage({ onEnter }: LandingPageProps) {
     return () => { if (animRef.current !== undefined) cancelAnimationFrame(animRef.current); };
   }, []);
 
-  // AIR5 slideshow: starts only when fully chosen
   const air5Chosen = divider >= CHOSEN_THRESHOLD;
   useEffect(() => {
     if (!air5Chosen) {
@@ -110,7 +107,6 @@ export function LandingPage({ onEnter }: LandingPageProps) {
     return () => clearInterval(air5SlideRef.current);
   }, [air5Chosen]);
 
-  // RAP slideshow: starts only when fully chosen
   const rapChosen = divider <= (1 - CHOSEN_THRESHOLD);
   useEffect(() => {
     if (!rapChosen) {
@@ -125,10 +121,12 @@ export function LandingPage({ onEnter }: LandingPageProps) {
     return () => clearInterval(rapSlideRef.current);
   }, [rapChosen]);
 
-  // INVERTED tracking: mouse left → AIR5 grows (divider rises)
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const raw = 1 - (e.clientX - rect.left) / rect.width;
+    const mobile = rect.width < MOBILE_BP;
+    const raw = mobile
+      ? 1 - (e.clientY - rect.top) / rect.height
+      : 1 - (e.clientX - rect.left) / rect.width;
     targetDivider.current = Math.max(0.32, Math.min(0.68, raw));
   }, []);
 
@@ -144,52 +142,63 @@ export function LandingPage({ onEnter }: LandingPageProps) {
 
   const handleTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.touches[0].clientX - rect.left;
-    targetDivider.current = x / rect.width < 0.5 ? 0.68 : 0.32;
+    const mobile = rect.width < MOBILE_BP;
+    if (mobile) {
+      const y = e.touches[0].clientY - rect.top;
+      targetDivider.current = y / rect.height < 0.5 ? 0.68 : 0.32;
+    } else {
+      const x = e.touches[0].clientX - rect.left;
+      targetDivider.current = x / rect.width < 0.5 ? 0.68 : 0.32;
+    }
   }, []);
 
-  const handleTouchEnd = useCallback(() => {
-    // Removed automatic handleCta on touch end.
-    // The user must explicitly click the CTA button to enter the app.
-  }, []);
+  const handleTouchEnd = useCallback(() => {}, []);
 
-  // ── Derived values ──
+  // ── Derived geometry ──
 
+  // Desktop: vertical diagonal (X-axis)
   const midX = divider * vpW;
   const diagOffset = Math.round(Math.min(vpH / (2 * Math.tan(65 * Math.PI / 180)), vpW * 0.20));
+  const lineX1 = midX + diagOffset; // top edge X
+  const lineX2 = midX - diagOffset; // bottom edge X
 
-  const lineX1 = midX + diagOffset; // top
-  const lineX2 = midX - diagOffset; // bottom
+  // Mobile: horizontal diagonal (Y-axis), AIR5 = top, RAP = bottom
+  const midY = divider * vpH;
+  const diagOffsetH = Math.round(Math.min(vpW / (2 * Math.tan(65 * Math.PI / 180)), vpH * 0.15));
+  const lineYL = midY - diagOffsetH; // left-edge Y
+  const lineYR = midY + diagOffsetH; // right-edge Y
 
-  const air5Clip = `polygon(0px 0px, ${lineX1}px 0px, ${lineX2}px ${vpH}px, 0px ${vpH}px)`;
-  const rapClip  = `polygon(${lineX1}px 0px, ${vpW}px 0px, ${vpW}px ${vpH}px, ${lineX2}px ${vpH}px)`;
+  const air5Clip = isMobile
+    ? `polygon(0px 0px, ${vpW}px 0px, ${vpW}px ${lineYR}px, 0px ${lineYL}px)`
+    : `polygon(0px 0px, ${lineX1}px 0px, ${lineX2}px ${vpH}px, 0px ${vpH}px)`;
+  const rapClip = isMobile
+    ? `polygon(0px ${lineYL}px, ${vpW}px ${lineYR}px, ${vpW}px ${vpH}px, 0px ${vpH}px)`
+    : `polygon(${lineX1}px 0px, ${vpW}px 0px, ${vpW}px ${vpH}px, ${lineX2}px ${vpH}px)`;
 
-  // Image opacity: 50% at rest → 100% active, 25% inactive (always slightly visible)
+  // Image opacity: 50% at rest → 100% active, 25% inactive
   const air5ImgAlpha = Math.max(0.25, Math.min(1, 0.5 + (divider - 0.5) * 5));
   const rapImgAlpha  = Math.max(0.25, Math.min(1, 0.5 + (0.5 - divider) * 5));
 
-  // Unified content alpha: text + CTA appear together on the ACTIVE/image side
+  // Content alpha: text + CTA fade in on active side
   const air5ContentAlpha = Math.max(0, Math.min(1, (divider - 0.5) * 5.5));
   const rapContentAlpha  = Math.max(0, Math.min(1, (0.5 - divider) * 5.5));
+
+  // Dynamic gradient: 0 at rest, rises only on the INACTIVE side
+  const air5GradAlpha = Math.max(0, Math.min(1, (0.5 - divider) * 5.5));
+  const rapGradAlpha  = Math.max(0, Math.min(1, (divider - 0.5) * 5.5));
 
   // Title scale
   const air5TitleScale = Math.max(0.82, Math.min(1.18, 0.82 + (divider - 0.32) * 1.0));
   const rapTitleScale  = Math.max(0.82, Math.min(1.18, 0.82 + ((1 - divider) - 0.32) * 1.0));
 
-  // Hint
+  // Hint opacity: 1 at rest (divider = 0.5), fades out as interaction grows
   const hintAlpha = Math.max(0, 1 - Math.abs(divider - 0.5) * 10);
 
-  // Parallax
+  // Parallax shift
   const air5ShiftX = (divider - 0.5) * 32;
   const rapShiftX  = (0.5 - divider) * 32;
 
   // ── Shared styles ──
-
-  const gradientOverlay: React.CSSProperties = {
-    position: 'absolute', inset: 0,
-    background: 'linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.45) 50%, rgba(0,0,0,0.90) 100%)',
-    zIndex: 1, pointerEvents: 'none',
-  };
 
   const infoBlock: React.CSSProperties = {
     background: 'white',
@@ -233,9 +242,8 @@ export function LandingPage({ onEnter }: LandingPageProps) {
         userSelect: 'none',
       }}
     >
-      {/* ══ PANNEAU AIR 5 (gauche) ══ */}
+      {/* ══ PANNEAU AIR 5 (gauche / haut mobile) ══ */}
       <div style={{ position: 'absolute', inset: 0, clipPath: air5Clip }}>
-
         <div style={{ position: 'absolute', inset: 0, opacity: air5ImgAlpha, transition: 'none' }}>
           <img
             key={air5Idx}
@@ -250,9 +258,13 @@ export function LandingPage({ onEnter }: LandingPageProps) {
             }}
           />
         </div>
-
-        <div style={gradientOverlay} />
-
+        {/* Gradient only when AIR5 is the inactive side */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.45) 50%, rgba(0,0,0,0.90) 100%)',
+          opacity: air5GradAlpha,
+          zIndex: 1, pointerEvents: 'none',
+        }} />
         {/* Titre AIR 5 */}
         <div style={{
           position: 'absolute', top: '2.5rem', left: '2.5rem', zIndex: 3,
@@ -267,32 +279,10 @@ export function LandingPage({ onEnter }: LandingPageProps) {
             AIR 5
           </h2>
         </div>
-
-        {/* Bloc texte + CTA AIR 5 — centré verticalement à gauche */}
-        <div style={{
-          position: 'absolute', top: '50%', left: '2.5rem', zIndex: 3,
-          opacity: air5ContentAlpha,
-          transform: `translateY(calc(-50% + ${(1 - air5ContentAlpha) * -14}px))`,
-          transition: 'opacity 0.4s ease, transform 0.4s ease',
-          pointerEvents: air5ContentAlpha > 0.4 ? 'auto' : 'none',
-        }}>
-          <div style={infoBlock}>
-            <p style={textStyle}>{AIR5_TEXT}</p>
-            <button
-              onClick={() => handleCta('air5')}
-              tabIndex={air5ContentAlpha > 0.4 ? 0 : -1}
-              aria-label="Ouvrir l'édition AIR 5"
-              style={ctaBtn}
-            >
-              COLORIER AIR 5 <span aria-hidden="true">→</span>
-            </button>
-          </div>
-        </div>
       </div>
 
-      {/* ══ PANNEAU RAP (droite) ══ */}
+      {/* ══ PANNEAU RAP (droite / bas mobile) ══ */}
       <div style={{ position: 'absolute', inset: 0, clipPath: rapClip }}>
-
         <div style={{ position: 'absolute', inset: 0, opacity: rapImgAlpha, transition: 'none' }}>
           <img
             key={rapIdx}
@@ -307,14 +297,24 @@ export function LandingPage({ onEnter }: LandingPageProps) {
             }}
           />
         </div>
-
-        <div style={gradientOverlay} />
-
-        {/* Titre RAP */}
+        {/* Gradient only when RAP is the inactive side */}
         <div style={{
-          position: 'absolute', top: '2.5rem', right: '2.5rem', zIndex: 3,
-          color: 'white', textAlign: 'right', pointerEvents: 'none',
-          transform: `scale(${rapTitleScale})`, transformOrigin: 'right top',
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.45) 50%, rgba(0,0,0,0.90) 100%)',
+          opacity: rapGradAlpha,
+          zIndex: 1, pointerEvents: 'none',
+        }} />
+        {/* Titre RAP — bas-gauche sur mobile, haut-droite sur desktop */}
+        <div style={{
+          position: 'absolute',
+          ...(isMobile
+            ? { bottom: '2.5rem', left: '2.5rem', transformOrigin: 'left bottom', textAlign: 'left' as const }
+            : { top: '2.5rem', right: '2.5rem', transformOrigin: 'right top', textAlign: 'right' as const }
+          ),
+          zIndex: 3,
+          color: 'white',
+          pointerEvents: 'none',
+          transform: `scale(${rapTitleScale})`,
           transition: 'transform 0.35s ease',
         }}>
           <span style={{ display: 'block', fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', opacity: 0.55, marginBottom: '0.3rem' }}>
@@ -324,41 +324,81 @@ export function LandingPage({ onEnter }: LandingPageProps) {
             RAP
           </h2>
         </div>
+      </div>
 
-        {/* Bloc texte + CTA RAP — centré verticalement à droite */}
-        <div style={{
-          position: 'absolute', top: '50%', right: '2.5rem', zIndex: 3,
-          opacity: rapContentAlpha,
-          transform: `translateY(calc(-50% + ${(1 - rapContentAlpha) * 14}px))`,
-          transition: 'opacity 0.4s ease, transform 0.4s ease',
-          pointerEvents: rapContentAlpha > 0.4 ? 'auto' : 'none',
-          display: 'flex', flexDirection: 'column', alignItems: 'flex-end',
-        }}>
-          <div style={{ ...infoBlock, textAlign: 'right' }}>
-            <p style={textStyle}>{RAP_TEXT}</p>
-            <button
-              onClick={() => handleCta('rap')}
-              tabIndex={rapContentAlpha > 0.4 ? 0 : -1}
-              aria-label="Ouvrir l'édition RAP"
-              style={{ ...ctaBtn, marginLeft: 'auto' }}
-            >
-              <span aria-hidden="true">←</span> COLORIER RAP
-            </button>
-          </div>
+      {/* ══ BLOC TEXTE + CTA AIR 5 — zIndex 15, toujours au-dessus de la séparation ══ */}
+      <div style={{
+        position: 'absolute',
+        left: '2.5rem',
+        ...(isMobile
+          ? { top: '6rem' }
+          : { top: '50%', transform: `translateY(calc(-50% + ${(1 - air5ContentAlpha) * -14}px))` }
+        ),
+        zIndex: 15,
+        opacity: air5ContentAlpha,
+        transition: 'opacity 0.4s ease, transform 0.4s ease',
+        pointerEvents: air5ContentAlpha > 0.4 ? 'auto' : 'none',
+      }}>
+        <div style={infoBlock}>
+          <p style={textStyle}>{AIR5_TEXT}</p>
+          <button
+            onClick={() => handleCta('air5')}
+            tabIndex={air5ContentAlpha > 0.4 ? 0 : -1}
+            aria-label="Ouvrir l'édition AIR 5"
+            style={ctaBtn}
+          >
+            COLORIER AIR 5 <span aria-hidden="true">→</span>
+          </button>
         </div>
       </div>
 
-      {/* ══ LIGNE DIAGONALE ══ */}
+      {/* ══ BLOC TEXTE + CTA RAP — zIndex 15, toujours au-dessus de la séparation ══ */}
+      <div style={{
+        position: 'absolute',
+        right: '2.5rem',
+        ...(isMobile
+          ? { bottom: '6rem' }
+          : { top: '50%', transform: `translateY(calc(-50% + ${(1 - rapContentAlpha) * 14}px))` }
+        ),
+        zIndex: 15,
+        opacity: rapContentAlpha,
+        transition: 'opacity 0.4s ease, transform 0.4s ease',
+        pointerEvents: rapContentAlpha > 0.4 ? 'auto' : 'none',
+        display: 'flex', flexDirection: 'column', alignItems: 'flex-end',
+      }}>
+        <div style={{ ...infoBlock, textAlign: 'right' }}>
+          <p style={textStyle}>{RAP_TEXT}</p>
+          <button
+            onClick={() => handleCta('rap')}
+            tabIndex={rapContentAlpha > 0.4 ? 0 : -1}
+            aria-label="Ouvrir l'édition RAP"
+            style={{ ...ctaBtn, marginLeft: 'auto' }}
+          >
+            <span aria-hidden="true">←</span> COLORIER RAP
+          </button>
+        </div>
+      </div>
+
+      {/* ══ LIGNE DE SÉPARATION ══ */}
       <svg
         aria-hidden="true"
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', zIndex: 10, pointerEvents: 'none', overflow: 'visible' }}
       >
-        <line
-          x1={lineX1} y1={0}
-          x2={lineX2} y2={vpH}
-          stroke={`rgba(255,255,255,${0.18 + hintAlpha * 0.45})`}
-          strokeWidth="1"
-        />
+        {isMobile ? (
+          <line
+            x1={0} y1={lineYL}
+            x2={vpW} y2={lineYR}
+            stroke={`rgba(255,255,255,${0.18 + hintAlpha * 0.45})`}
+            strokeWidth="1"
+          />
+        ) : (
+          <line
+            x1={lineX1} y1={0}
+            x2={lineX2} y2={vpH}
+            stroke={`rgba(255,255,255,${0.18 + hintAlpha * 0.45})`}
+            strokeWidth="1"
+          />
+        )}
       </svg>
 
       {/* ══ HINT CENTRAL ══ */}
@@ -366,8 +406,8 @@ export function LandingPage({ onEnter }: LandingPageProps) {
         aria-hidden="true"
         style={{
           position: 'absolute',
-          top: '50%',
-          left: `${divider * 100}%`,
+          top: isMobile ? `${divider * 100}%` : '50%',
+          left: isMobile ? '50%' : `${divider * 100}%`,
           transform: 'translate(-50%, -50%)',
           zIndex: 20, pointerEvents: 'none',
           color: 'white', textAlign: 'center',
@@ -376,7 +416,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
         }}
       >
         <span style={{ fontSize: '0.56rem', fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', opacity: 0.7 }}>
-          ← DÉPLACEZ →
+          {isMobile ? '↑ DÉPLACEZ ↓' : '← DÉPLACEZ →'}
         </span>
       </div>
     </div>

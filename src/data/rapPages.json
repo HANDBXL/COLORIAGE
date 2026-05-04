@@ -1,93 +1,80 @@
 [
   {
-    "id": "rap-01",
-    "title": "Page 02-03",
-    "imageA": "PAGE-02.jpg",
-    "imageB": "PAGE-03.jpg",
-    "overlay": "split"
+    "id": "rap-intro",
+    "title": "Intro",
+    "image": "INTRO.jpg",
+    "overlay": "full"
   },
   {
-    "id": "rap-02",
-    "title": "Page 04-05",
-    "imageA": "PAGE-04.jpg",
-    "imageB": "PAGE-05.jpg",
-    "overlay": "split"
+    "id": "rap-alkapote",
+    "title": "Alkapote",
+    "image": "Alkapote.jpg",
+    "overlay": "full"
   },
   {
-    "id": "rap-03",
-    "title": "Page 06-07",
-    "imageA": "PAGE-06.jpg",
-    "imageB": "PAGE-07.jpg",
-    "overlay": "split"
+    "id": "rap-christine-booba",
+    "title": "Christine & Booba",
+    "image": "Christine and the queens & Booba.jpg",
+    "overlay": "full"
   },
   {
-    "id": "rap-04",
-    "title": "Page 08-09",
-    "imageA": "PAGE-08.jpg",
-    "imageB": "PAGE-09.jpg",
-    "overlay": "split"
+    "id": "rap-dikke-freddy",
+    "title": "Dikke & Freddy Konings",
+    "image": "Dikke & Freddy Konings.jpg",
+    "overlay": "full"
   },
   {
-    "id": "rap-05",
-    "title": "Page 10-11",
-    "imageA": "PAGE-10.jpg",
-    "imageB": "PAGE-11.jpg",
-    "overlay": "split"
+    "id": "rap-isha",
+    "title": "Isha",
+    "image": "Isha.jpg",
+    "overlay": "full"
   },
   {
-    "id": "rap-06",
-    "title": "Page 12-13",
-    "imageA": "PAGE-12.jpg",
-    "imageB": "PAGE-13.jpg",
-    "overlay": "split"
+    "id": "rap-jean-jass-akhenaton",
+    "title": "Jean Jass & Akhenaton",
+    "image": "Jean Jass & Akhenaton.jpg",
+    "overlay": "full"
   },
   {
-    "id": "rap-07",
-    "title": "Page 14-15",
-    "imageA": "PAGE-14.jpg",
-    "imageB": "PAGE-15.jpg",
-    "overlay": "split"
+    "id": "rap-jokair-laylow",
+    "title": "Jokair & Laylow",
+    "image": "Jokair & Laylow.jpg",
+    "overlay": "full"
   },
   {
-    "id": "rap-08",
-    "title": "Page 16-17",
-    "imageA": "PAGE-16.jpg",
-    "imageB": "PAGE-17.jpg",
-    "overlay": "split"
+    "id": "rap-krisy",
+    "title": "Krisy",
+    "image": "Krisy.jpg",
+    "overlay": "full"
   },
   {
-    "id": "rap-09",
-    "title": "Page 18-19",
-    "imageA": "PAGE-18.jpg",
-    "imageB": "PAGE-19.jpg",
-    "overlay": "split"
+    "id": "rap-niska",
+    "title": "Niska",
+    "image": "Niska.jpg",
+    "overlay": "full"
   },
   {
-    "id": "rap-10",
-    "title": "Page 20-21",
-    "imageA": "PAGE-20.jpg",
-    "imageB": "PAGE-21.jpg",
-    "overlay": "split"
+    "id": "rap-oxmo-orelsan",
+    "title": "Oxmo Puccino & Orelsan",
+    "image": "Oxmo Puccino & Orelsan.jpg",
+    "overlay": "full"
   },
   {
-    "id": "rap-11",
-    "title": "Page 22-23",
-    "imageA": "PAGE-22.jpg",
-    "imageB": "PAGE-23.jpg",
-    "overlay": "split"
+    "id": "rap-plk",
+    "title": "PLK",
+    "image": "PLK.jpg",
+    "overlay": "full"
   },
   {
-    "id": "rap-12",
-    "title": "Page 24-25",
-    "imageA": "PAGE-24.jpg",
-    "imageB": "PAGE-25.jpg",
-    "overlay": "split"
+    "id": "rap-peet-zwangere",
+    "title": "Peet & Zwangere Guy",
+    "image": "Peet & Zwangere Guy.jpg",
+    "overlay": "full"
   },
   {
-    "id": "rap-13",
-    "title": "Page 26-27",
-    "imageA": "PAGE-26.jpg",
-    "imageB": "PAGE-27.jpg",
-    "overlay": "split"
+    "id": "rap-stromae",
+    "title": "Stromae",
+    "image": "Stromae.jpg",
+    "overlay": "full"
   }
 ]

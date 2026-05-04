@@ -36,16 +36,17 @@ const PAGES: PageData[] = (pagesData as any[]).map(p => {
   return { ...p, url, urlA, urlB };
 });
 
-// Build full URLs for RAP pages (double‑page layout)
+// Build full URLs for RAP pages
 const RAP_PAGES: PageData[] = (rapPages as any[]).map(p => {
+  const image = p.image || '';
+  const url = image ? new URL(`./assets/illustrations-RAP/${image}`, import.meta.url).href : undefined;
   const urlA = p.imageA ? new URL(`./assets/illustrations-RAP/${p.imageA}`, import.meta.url).href : undefined;
   const urlB = p.imageB ? new URL(`./assets/illustrations-RAP/${p.imageB}`, import.meta.url).href : undefined;
-  // rapPages objects may not have a primary 'image' field; we keep url undefined
-  return { ...p, url: undefined, urlA, urlB };
+  return { ...p, url, urlA, urlB };
 });
 
 // Single Page Editor Instance
-function PageEditor({ page, isActive, artist, onToolSelect, isDark, toggleDark, isColorBlind, toggleColorBlind }: {
+function PageEditor({ page, isActive, artist, onToolSelect, isDark, toggleDark, isColorBlind, toggleColorBlind, edition }: {
   page: PageData,
   isActive: boolean,
   artist: string,
@@ -54,6 +55,7 @@ function PageEditor({ page, isActive, artist, onToolSelect, isDark, toggleDark, 
   toggleDark?: () => void,
   isColorBlind?: boolean,
   toggleColorBlind?: () => void,
+  edition?: 'air5' | 'rap' | null,
 }) {
   const strokeDistanceRef = useRef(0);
 
@@ -235,6 +237,7 @@ function PageEditor({ page, isActive, artist, onToolSelect, isDark, toggleDark, 
             toggleDark={toggleDark}
             isColorBlind={isColorBlind}
             toggleColorBlind={toggleColorBlind}
+            edition={edition}
             color={drawLogic.color}
             setColor={drawLogic.setColor}
             lineWidth={drawLogic.lineWidth}
@@ -269,6 +272,13 @@ export default function App() {
   const [showNav, setShowNav] = useState(true);
   const [isDark, setIsDark] = useState(false);
   const [isColorBlind, setIsColorBlind] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 640);
+
+  useEffect(() => {
+    const update = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
 
   // Load appropriate pages based on selected edition
   const pages = edition === 'rap' ? RAP_PAGES : PAGES;
@@ -354,7 +364,11 @@ export default function App() {
         aria-controls="planches-panel"
         aria-label={showNav ? `Masquer les planches — page actuelle : ${pages[pageIndex].title}` : `Afficher les planches — page actuelle : ${pages[pageIndex].title}`}
         style={{
-          position: 'fixed', top: '1.25rem', left: '50%', transform: 'translateX(-50%)',
+          position: 'fixed', top: '1.25rem',
+          ...(isMobile
+            ? { right: '1.25rem' }
+            : { left: '50%', transform: 'translateX(-50%)' }
+          ),
           zIndex: 500,
           border: '1px solid var(--panel-border)',
           background: 'var(--panel-bg)',
@@ -529,6 +543,7 @@ export default function App() {
         toggleDark={toggleDark}
         isColorBlind={isColorBlind}
         toggleColorBlind={toggleColorBlind}
+        edition={edition}
       />
     </div>
   );

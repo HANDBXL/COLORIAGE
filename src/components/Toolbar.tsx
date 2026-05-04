@@ -6,11 +6,20 @@ import { RangeSlider } from './RangeSlider';
 import { BRUSH_WIDTH_MIN, BRUSH_WIDTH_MAX, OPACITY_MIN, OPACITY_MAX, CUSTOM_COLORS_KEY } from '../constants';
 
 // --- COLOR UTILS & CONSTANTS ---
-const PRESET_PALETTES = [
-    { name: 'Essentiel', colors: ['#FF0000', '#000000', '#FFFFFF', '#808080', '#CCCCCC', '#D3D3D3', '#FFD700', '#FFA500', '#00FF00', '#0000FF', '#800080', '#A52A2A'] },
-    { name: 'Classique', colors: ['#D32F2F', '#1976D2', '#388E3C', '#FBC02D', '#7B1FA2', '#E64A19', '#5D4037', '#455A64', '#0288D1', '#C2185B', '#F57C00', '#689F38'] },
-    { name: 'Sport',     colors: ['#E52B50', '#FAEC1B', '#00CC99', '#FF9900', '#111111', '#007FFF', '#FF4500', '#32CD32', '#9400D3', '#FF00FF', '#0000FF', '#00FFFF'] },
-    { name: 'Vintage',   colors: ['#AEC6CF', '#836953', '#CFCFC4', '#F49AC2', '#B39EB5', '#FFD1DC', '#77DD77', '#FFB347', '#C2B280', '#D3A580', '#92A1CF', '#E9C46A'] },
+const PALETTE_ESSENTIEL = { name: 'Essentiel', colors: ['#FF0000', '#000000', '#FFFFFF', '#808080', '#CCCCCC', '#D3D3D3', '#FFD700', '#FFA500', '#00FF00', '#0000FF', '#800080', '#A52A2A'] };
+
+const AIR5_PALETTES = [
+    PALETTE_ESSENTIEL,
+    { name: 'Classique', colors: ['#D32F2F', '#1565C0', '#2E7D32', '#90A4AE', '#E65100', '#F9A825', '#4A148C', '#37474F', '#BF360C', '#1B5E20', '#CFD8DC', '#FFF8E1'] },
+    { name: 'Circuit',   colors: ['#E8002D', '#FFD700', '#00D2BE', '#FF8700', '#1E1E1E', '#6E6E6E', '#0047AB', '#FF4500', '#005B35', '#C0C0C0', '#FFFFFF', '#FFA500'] },
+    { name: 'Rétro',     colors: ['#1A237E', '#B71C1C', '#C0A050', '#F5F0E8', '#4E342E', '#607D8B', '#78909C', '#558B2F', '#6D4C41', '#BCAAA4', '#FFF9C4', '#212121'] },
+];
+
+const RAP_PALETTES = [
+    PALETTE_ESSENTIEL,
+    { name: 'Hip-Hop',   colors: ['#7B1FA2', '#1565C0', '#00C853', '#FFD600', '#FF6D00', '#546E7A', '#000000', '#FFFFFF', '#D50000', '#0091EA', '#FFD700', '#00BFA5'] },
+    { name: 'Old School',colors: ['#000000', '#FFFFFF', '#795548', '#1565C0', '#D32F2F', '#E65100', '#6A1B9A', '#2E7D32', '#212121', '#F9A825', '#9E9E9E', '#A1887F'] },
+    { name: 'Vinyle',    colors: ['#121212', '#B0B0B0', '#F5F0DC', '#C62828', '#5D4037', '#455A64', '#FFD54F', '#1565C0', '#388E3C', '#6A1B9A', '#F5F5F5', '#8D6E63'] },
 ];
 
 const hslToHex = (h: number, s: number, l: number) => {
@@ -60,6 +69,7 @@ interface ToolbarProps {
     toggleDark?: () => void;
     isColorBlind?: boolean;
     toggleColorBlind?: () => void;
+    edition?: 'air5' | 'rap' | null;
 
     color: string;
     setColor: (c: string) => void;
@@ -80,10 +90,13 @@ export const Toolbar: React.FC<ToolbarProps> = React.memo(({
     resetZoom, zoomIn, zoomOut, onExport,
     isDark = false, toggleDark,
     isColorBlind = false, toggleColorBlind,
+    edition = null,
     color, setColor, lineWidth, setLineWidth,
     brushType, setBrushType, opacity, setOpacity,
     eraserWidth, setEraserWidth, eraserOpacity, setEraserOpacity
 }) => {
+    const PRESET_PALETTES = edition === 'rap' ? RAP_PALETTES : AIR5_PALETTES;
+
     const [activeMenu, setActiveMenu] = useState<'none' | 'more' | 'brush' | 'color' | 'eraser'>('none');
 
     const [hsl, setHsl] = useState(() => hexToHsl(color));
