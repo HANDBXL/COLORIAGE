@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
+import AIR5_VIDEO from '../assets/COVER AIR5/AIR-V1.mp4';
+import RAP_VIDEO from '../assets/COVER RAP/RAP-V1.mp4';
 import AIR5_1 from '../assets/COVER AIR5/AIR5-01.png';
 import AIR5_2 from '../assets/COVER AIR5/AIR5-02.png';
 import AIR5_3 from '../assets/COVER AIR5/AIR5-03.png';
@@ -9,8 +11,23 @@ import RAP_1 from '../assets/COVER RAP/RAP-01.jpeg';
 import RAP_2 from '../assets/COVER RAP/RAP-02.jpeg';
 import RAP_3 from '../assets/COVER RAP/RAP-03.jpeg';
 
-const AIR5_IMAGES = [AIR5_1, AIR5_2, AIR5_3, AIR5_4, AIR5_5];
-const RAP_IMAGES = [RAP_1, RAP_2, RAP_3];
+type Slide = { type: 'video'; src: string } | { type: 'image'; src: string };
+
+const AIR5_SLIDES: Slide[] = [
+  { type: 'video', src: AIR5_VIDEO },
+  { type: 'image', src: AIR5_1 },
+  { type: 'image', src: AIR5_2 },
+  { type: 'image', src: AIR5_3 },
+  { type: 'image', src: AIR5_4 },
+  { type: 'image', src: AIR5_5 },
+];
+
+const RAP_SLIDES: Slide[] = [
+  { type: 'video', src: RAP_VIDEO },
+  { type: 'image', src: RAP_1 },
+  { type: 'image', src: RAP_2 },
+  { type: 'image', src: RAP_3 },
+];
 
 const AIR5_CTA_URL: string | null = null;
 const RAP_CTA_URL: string | null = null;
@@ -60,10 +77,10 @@ export function LandingPage({ onEnter }: LandingPageProps) {
 
   const isMobile = vpW < MOBILE_BP;
 
-  const [air5Idx, setAir5Idx] = useState(0);
-  const [rapIdx, setRapIdx] = useState(0);
-  const air5SlideRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
-  const rapSlideRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+  const [air5Slide, setAir5Slide] = useState(0);
+  const [rapSlide, setRapSlide] = useState(0);
+  const air5TimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const rapTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     const style = document.createElement('style');
@@ -95,31 +112,28 @@ export function LandingPage({ onEnter }: LandingPageProps) {
 
   const air5Chosen = divider >= CHOSEN_THRESHOLD;
   useEffect(() => {
-    if (!air5Chosen) {
-      clearInterval(air5SlideRef.current);
-      air5SlideRef.current = undefined;
-      setAir5Idx(0);
-      return;
+    clearTimeout(air5TimerRef.current);
+    if (!air5Chosen) { setAir5Slide(0); return; }
+    // Only set timer for image slides; video advances via onEnded
+    if (AIR5_SLIDES[air5Slide % AIR5_SLIDES.length].type === 'image') {
+      air5TimerRef.current = setTimeout(() => {
+        setAir5Slide(s => (s + 1) % AIR5_SLIDES.length);
+      }, SLIDE_MS);
     }
-    air5SlideRef.current = setInterval(() => {
-      setAir5Idx(i => (i + 1) % AIR5_IMAGES.length);
-    }, SLIDE_MS);
-    return () => clearInterval(air5SlideRef.current);
-  }, [air5Chosen]);
+    return () => clearTimeout(air5TimerRef.current);
+  }, [air5Chosen, air5Slide]);
 
   const rapChosen = divider <= (1 - CHOSEN_THRESHOLD);
   useEffect(() => {
-    if (!rapChosen) {
-      clearInterval(rapSlideRef.current);
-      rapSlideRef.current = undefined;
-      setRapIdx(0);
-      return;
+    clearTimeout(rapTimerRef.current);
+    if (!rapChosen) { setRapSlide(0); return; }
+    if (RAP_SLIDES[rapSlide % RAP_SLIDES.length].type === 'image') {
+      rapTimerRef.current = setTimeout(() => {
+        setRapSlide(s => (s + 1) % RAP_SLIDES.length);
+      }, SLIDE_MS);
     }
-    rapSlideRef.current = setInterval(() => {
-      setRapIdx(i => (i + 1) % RAP_IMAGES.length);
-    }, SLIDE_MS);
-    return () => clearInterval(rapSlideRef.current);
-  }, [rapChosen]);
+    return () => clearTimeout(rapTimerRef.current);
+  }, [rapChosen, rapSlide]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -179,9 +193,9 @@ export function LandingPage({ onEnter }: LandingPageProps) {
   const air5ImgAlpha = Math.max(0.25, Math.min(1, 0.5 + (divider - 0.5) * 5));
   const rapImgAlpha  = Math.max(0.25, Math.min(1, 0.5 + (0.5 - divider) * 5));
 
-  // Content alpha: text + CTA fade in on active side
-  const air5ContentAlpha = Math.max(0, Math.min(1, (divider - 0.5) * 5.5));
-  const rapContentAlpha  = Math.max(0, Math.min(1, (0.5 - divider) * 5.5));
+  // Content alpha: text + CTA — reaches 100% at ~1/3 of travel from center
+  const air5ContentAlpha = Math.max(0, Math.min(1, (divider - 0.5) * 14));
+  const rapContentAlpha  = Math.max(0, Math.min(1, (0.5 - divider) * 14));
 
   // Dynamic gradient: 0 at rest, rises only on the INACTIVE side
   const air5GradAlpha = Math.max(0, Math.min(1, (0.5 - divider) * 5.5));
@@ -245,18 +259,50 @@ export function LandingPage({ onEnter }: LandingPageProps) {
       {/* ══ PANNEAU AIR 5 (gauche / haut mobile) ══ */}
       <div style={{ position: 'absolute', inset: 0, clipPath: air5Clip }}>
         <div style={{ position: 'absolute', inset: 0, opacity: air5ImgAlpha, transition: 'none' }}>
+          {/* Cover statique (toujours visible en fond) */}
           <img
-            key={air5Idx}
-            src={AIR5_IMAGES[air5Idx]}
+            src={AIR5_SLIDES[1].src}
             alt="" aria-hidden="true"
-            className="slide-img"
             style={{
               position: 'absolute', inset: 0, width: '100%', height: '100%',
               objectFit: 'cover', objectPosition: 'center',
-              transform: `translateX(${air5ShiftX}px) scale(1.06)`,
+              transform: `translateX(${air5ShiftX}px) scale(1.02)`,
               pointerEvents: 'none',
             }}
           />
+          {/* Slideshow actif quand chosen */}
+          {air5Chosen && (() => {
+            const slide = AIR5_SLIDES[air5Slide % AIR5_SLIDES.length];
+            return slide.type === 'video' ? (
+              <video
+                key={`air5-${air5Slide}`}
+                autoPlay muted playsInline
+                className="slide-img"
+                onEnded={() => setAir5Slide(s => (s + 1) % AIR5_SLIDES.length)}
+                style={{
+                  position: 'absolute', inset: 0, width: '100%', height: '100%',
+                  objectFit: 'cover', objectPosition: 'center',
+                  transform: `translateX(${air5ShiftX}px) scale(1.02)`,
+                  pointerEvents: 'none',
+                }}
+              >
+                <source src={slide.src} type="video/mp4" />
+              </video>
+            ) : (
+              <img
+                key={`air5-${air5Slide}`}
+                src={slide.src}
+                alt="" aria-hidden="true"
+                className="slide-img"
+                style={{
+                  position: 'absolute', inset: 0, width: '100%', height: '100%',
+                  objectFit: 'cover', objectPosition: 'center',
+                  transform: `translateX(${air5ShiftX}px) scale(1.02)`,
+                  pointerEvents: 'none',
+                }}
+              />
+            );
+          })()}
         </div>
         {/* Gradient only when AIR5 is the inactive side */}
         <div style={{
@@ -284,18 +330,50 @@ export function LandingPage({ onEnter }: LandingPageProps) {
       {/* ══ PANNEAU RAP (droite / bas mobile) ══ */}
       <div style={{ position: 'absolute', inset: 0, clipPath: rapClip }}>
         <div style={{ position: 'absolute', inset: 0, opacity: rapImgAlpha, transition: 'none' }}>
+          {/* Cover statique (toujours visible en fond) */}
           <img
-            key={rapIdx}
-            src={RAP_IMAGES[rapIdx]}
+            src={RAP_SLIDES[1].src}
             alt="" aria-hidden="true"
-            className="slide-img"
             style={{
               position: 'absolute', inset: 0, width: '100%', height: '100%',
               objectFit: 'cover', objectPosition: 'center',
-              transform: `translateX(${rapShiftX}px) scale(1.06)`,
+              transform: `translateX(${rapShiftX}px) scale(1.02)`,
               pointerEvents: 'none',
             }}
           />
+          {/* Slideshow actif quand chosen */}
+          {rapChosen && (() => {
+            const slide = RAP_SLIDES[rapSlide % RAP_SLIDES.length];
+            return slide.type === 'video' ? (
+              <video
+                key={`rap-${rapSlide}`}
+                autoPlay muted playsInline
+                className="slide-img"
+                onEnded={() => setRapSlide(s => (s + 1) % RAP_SLIDES.length)}
+                style={{
+                  position: 'absolute', inset: 0, width: '100%', height: '100%',
+                  objectFit: 'cover', objectPosition: 'center',
+                  transform: `translateX(${rapShiftX}px) scale(1.02)`,
+                  pointerEvents: 'none',
+                }}
+              >
+                <source src={slide.src} type="video/mp4" />
+              </video>
+            ) : (
+              <img
+                key={`rap-${rapSlide}`}
+                src={slide.src}
+                alt="" aria-hidden="true"
+                className="slide-img"
+                style={{
+                  position: 'absolute', inset: 0, width: '100%', height: '100%',
+                  objectFit: 'cover', objectPosition: 'center',
+                  transform: `translateX(${rapShiftX}px) scale(1.02)`,
+                  pointerEvents: 'none',
+                }}
+              />
+            );
+          })()}
         </div>
         {/* Gradient only when RAP is the inactive side */}
         <div style={{
@@ -336,7 +414,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
         ),
         zIndex: 15,
         opacity: air5ContentAlpha,
-        transition: 'opacity 0.4s ease, transform 0.4s ease',
+        transition: 'none',
         pointerEvents: air5ContentAlpha > 0.4 ? 'auto' : 'none',
       }}>
         <div style={infoBlock}>
@@ -362,7 +440,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
         ),
         zIndex: 15,
         opacity: rapContentAlpha,
-        transition: 'opacity 0.4s ease, transform 0.4s ease',
+        transition: 'none',
         pointerEvents: rapContentAlpha > 0.4 ? 'auto' : 'none',
         display: 'flex', flexDirection: 'column', alignItems: 'flex-end',
       }}>
