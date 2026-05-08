@@ -192,7 +192,7 @@ export const CanvasBoard: React.FC<CanvasBoardProps> = React.memo(({ imageSrc, i
     }, [imageSrc, imageBSrc, pageId]);
 
     return (
-        <div className="canvas-wrapper" style={{ overflow: 'hidden', position: 'absolute', inset: 0, backgroundColor: '#f5f5f5' }} role="application" aria-label="Zone de dessin">
+        <div className="canvas-wrapper" style={{ overflow: 'hidden', position: 'absolute', inset: 0, backgroundColor: 'var(--bg-color)' }} role="application" aria-label="Zone de dessin">
             {/* Loading Overlay */}
             <div style={{
                 position: 'absolute',

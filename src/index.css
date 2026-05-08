@@ -109,7 +109,7 @@ body {
 
 .theme-btn.active {
   background-color: var(--accent-color);
-  color: white;
+  color: var(--panel-bg);
   border-color: var(--accent-color);
 }
 

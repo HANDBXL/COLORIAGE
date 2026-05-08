@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useLayoutEffect, useCallback, useMemo } from 'react';
-import { Pencil, Eraser, Hand, RotateCcw, Maximize, ZoomIn, ZoomOut, Download, MoreHorizontal, Moon, Sun, Eye, Palette, PenTool, Droplet, Sparkles } from 'lucide-react';
+import { Pencil, Eraser, Hand, RotateCcw, Maximize, ZoomIn, ZoomOut, Download, MoreHorizontal, Moon, Sun, Palette, PenTool, Droplet, Sparkles } from 'lucide-react';
 import type { Tool, BrushType } from '../hooks/useDraw';
 import { ToolButton, ColorSelector, BrushSettings } from './ToolbarComponents';
 import { RangeSlider } from './RangeSlider';
@@ -67,8 +67,6 @@ interface ToolbarProps {
     onExport?: () => void;
     isDark?: boolean;
     toggleDark?: () => void;
-    isColorBlind?: boolean;
-    toggleColorBlind?: () => void;
     edition?: 'air5' | 'rap' | null;
 
     color: string;
@@ -89,7 +87,6 @@ export const Toolbar: React.FC<ToolbarProps> = React.memo(({
     tool, setTool, undo, canUndo,
     resetZoom, zoomIn, zoomOut, onExport,
     isDark = false, toggleDark,
-    isColorBlind = false, toggleColorBlind,
     edition = null,
     color, setColor, lineWidth, setLineWidth,
     brushType, setBrushType, opacity, setOpacity,
@@ -213,9 +210,6 @@ export const Toolbar: React.FC<ToolbarProps> = React.memo(({
                     <div className="divider" style={{ margin: '0.25rem 0' }} role="separator" />
                     <ToolButton active={isDark} onClick={() => toggleDark?.()} ariaLabel={isDark ? 'Passer en mode clair' : 'Passer en mode sombre'} icon={isDark ? <Sun size={16} /> : <Moon size={16} />} style={{ width: '100%', justifyContent: 'flex-start', gap: '0.6rem' }}>
                         {isDark ? 'Mode clair' : 'Mode sombre'}
-                    </ToolButton>
-                    <ToolButton active={isColorBlind} onClick={() => toggleColorBlind?.()} ariaLabel={isColorBlind ? 'Désactiver le mode daltonien' : 'Activer le mode daltonien'} icon={<Eye size={16} />} style={{ width: '100%', justifyContent: 'flex-start', gap: '0.6rem' }}>
-                        {isColorBlind ? 'Normale' : 'Daltonisme'}
                     </ToolButton>
                 </div>
             )}

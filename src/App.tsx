@@ -46,15 +46,13 @@ const RAP_PAGES: PageData[] = (rapPages as any[]).map(p => {
 });
 
 // Single Page Editor Instance
-function PageEditor({ page, isActive, artist, onToolSelect, isDark, toggleDark, isColorBlind, toggleColorBlind, edition }: {
+function PageEditor({ page, isActive, artist, onToolSelect, isDark, toggleDark, edition }: {
   page: PageData,
   isActive: boolean,
   artist: string,
   onToolSelect?: () => void,
   isDark?: boolean,
   toggleDark?: () => void,
-  isColorBlind?: boolean,
-  toggleColorBlind?: () => void,
   edition?: 'air5' | 'rap' | null,
 }) {
   const strokeDistanceRef = useRef(0);
@@ -235,8 +233,6 @@ function PageEditor({ page, isActive, artist, onToolSelect, isDark, toggleDark, 
             onExport={exportCanvas}
             isDark={isDark}
             toggleDark={toggleDark}
-            isColorBlind={isColorBlind}
-            toggleColorBlind={toggleColorBlind}
             edition={edition}
             color={drawLogic.color}
             setColor={drawLogic.setColor}
@@ -271,7 +267,6 @@ export default function App() {
   const [pageIndex, setPageIndex] = useState(0);
   const [showNav, setShowNav] = useState(true);
   const [isDark, setIsDark] = useState(false);
-  const [isColorBlind, setIsColorBlind] = useState(false);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 640);
 
   useEffect(() => {
@@ -293,10 +288,6 @@ export default function App() {
     document.body.classList.toggle('dark', isDark);
   }, [isDark]);
 
-  useEffect(() => {
-    document.body.style.filter = isColorBlind ? 'url(#deuteranopia)' : '';
-  }, [isColorBlind]);
-
   // Keyboard navigation for pages
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -313,7 +304,6 @@ export default function App() {
   }, [pages.length]);
 
   const toggleDark = useCallback(() => setIsDark(v => !v), []);
-  const toggleColorBlind = useCallback(() => setIsColorBlind(v => !v), []);
 
   if (showLanding) {
     return <LandingPage onEnter={handleEnterEdition} />;
@@ -321,15 +311,6 @@ export default function App() {
 
   return (
     <div className="app-container" role="main" aria-label="Application de coloriage">
-      {/* SVG colorblind filter (invisible) */}
-      <svg style={{ position: 'absolute', width: 0, height: 0 }} aria-hidden="true">
-        <defs>
-          <filter id="deuteranopia">
-            <feColorMatrix type="matrix" values="0.367 0.861 -0.228 0 0  0.280 0.673  0.047 0 0  -0.012 0.043  0.969 0 0  0 0 0 1 0" />
-          </filter>
-        </defs>
-      </svg>
-
       {/* ── BACK BUTTON ── */}
       <button
         onClick={() => { setShowLanding(true); setEdition(null); setPageIndex(0); }}
@@ -541,8 +522,6 @@ export default function App() {
         onToolSelect={() => setShowNav(false)}
         isDark={isDark}
         toggleDark={toggleDark}
-        isColorBlind={isColorBlind}
-        toggleColorBlind={toggleColorBlind}
         edition={edition}
       />
     </div>
