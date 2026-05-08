@@ -98,15 +98,16 @@ export const CanvasBoard: React.FC<CanvasBoardProps> = React.memo(({ imageSrc, i
                             savedImg.src = url;
                         });
                     } else {
+                        // Canvas = fond blanc uniquement.
+                        // Pour full/right-half : l'image vient exclusivement de l'overlay CSS (multiply).
+                        // Bake-in ici causerait une double couche effaçable par la gomme.
                         ctx.fillStyle = '#ffffff';
                         ctx.fillRect(0, 0, canvas.width, canvas.height);
                         if (overlayMode === 'split' && imgB && imgB.complete && imgB.naturalWidth > 0) {
-                            // En mode split, on dessine le dessin A (blanc) à gauche et l'image B à droite sur le fond
-                            // Note: A est l'overlay multiply, donc le fond à gauche doit être blanc.
+                            // Split : côté gauche blanc (à colorier), côté droit = imageB dessinée sur le canvas.
                             ctx.drawImage(imgB, imgW / 2, 0, imgW / 2, imgH);
-                        } else {
-                            ctx.drawImage(img, 0, 0, imgW, imgH);
                         }
+                        // full / right-half / none : canvas reste blanc, overlay CSS gère l'affichage.
                     }
                 } catch {
                     // Fallback
@@ -114,9 +115,8 @@ export const CanvasBoard: React.FC<CanvasBoardProps> = React.memo(({ imageSrc, i
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
                     if (overlayMode === 'split' && imgB && imgB.complete && imgB.naturalWidth > 0) {
                         ctx.drawImage(imgB, imgW / 2, 0, imgW / 2, imgH);
-                    } else {
-                        ctx.drawImage(img, 0, 0, imgW, imgH);
                     }
+                    // full / right-half / none : canvas reste blanc.
                 }
 
                 drawLogic.saveHistory();
@@ -163,7 +163,7 @@ export const CanvasBoard: React.FC<CanvasBoardProps> = React.memo(({ imageSrc, i
     const getCursorStyle = useCallback(() => {
         if (drawLogic.tool === 'hand' || drawLogic.isSpacePanning) return 'grab';
 
-        const size = Math.max(4, drawLogic.lineWidth * drawLogic.scale);
+        const size = Math.max(4, (drawLogic.tool === 'eraser' ? drawLogic.eraserWidth : drawLogic.lineWidth) * drawLogic.scale);
         const half = size / 2;
 
         let fillColor = drawLogic.color;
@@ -184,7 +184,7 @@ export const CanvasBoard: React.FC<CanvasBoardProps> = React.memo(({ imageSrc, i
         } catch {
             return 'crosshair';
         }
-    }, [drawLogic.tool, drawLogic.isSpacePanning, drawLogic.lineWidth, drawLogic.scale, drawLogic.color]);
+    }, [drawLogic.tool, drawLogic.isSpacePanning, drawLogic.lineWidth, drawLogic.eraserWidth, drawLogic.scale, drawLogic.color]);
 
     // Reset ready state when image source changes to hide old content
     useEffect(() => {
