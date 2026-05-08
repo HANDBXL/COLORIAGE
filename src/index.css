@@ -77,6 +77,12 @@ body {
   background-color: #2a2a2a;
 }
 
+/* Hover sur un bouton actif en dark mode : maintient le contraste accent/panel */
+.dark .tool-btn.active:hover:not(:disabled) {
+  background-color: var(--accent-hover);
+  color: var(--panel-bg);
+}
+
 .tool-btn.active {
   background-color: var(--accent-color);
   color: var(--panel-bg); /* Use panel-bg as contrasting color (White in light, Dark in dark) */

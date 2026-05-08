@@ -98,25 +98,22 @@ export const CanvasBoard: React.FC<CanvasBoardProps> = React.memo(({ imageSrc, i
                             savedImg.src = url;
                         });
                     } else {
-                        // Canvas = fond blanc uniquement.
-                        // Pour full/right-half : l'image vient exclusivement de l'overlay CSS (multiply).
-                        // Bake-in ici causerait une double couche effaçable par la gomme.
                         ctx.fillStyle = '#ffffff';
                         ctx.fillRect(0, 0, canvas.width, canvas.height);
-                        if (overlayMode === 'split' && imgB && imgB.complete && imgB.naturalWidth > 0) {
-                            // Split : côté gauche blanc (à colorier), côté droit = imageB dessinée sur le canvas.
-                            ctx.drawImage(imgB, imgW / 2, 0, imgW / 2, imgH);
+                        if (overlayMode === 'none') {
+                            // Pas d'overlay CSS : l'image est baked dans le canvas (seul mode d'affichage).
+                            ctx.drawImage(img, 0, 0, imgW, imgH);
                         }
-                        // full / right-half / none : canvas reste blanc, overlay CSS gère l'affichage.
+                        // full / right-half : canvas blanc, overlay CSS multiply gère l'affichage sans double couche.
+                        // split : canvas blanc des deux côtés ; imageB affichée via CSS overlay uniquement
+                        //         (évite le double multiply qui assombrit trop le côté référence).
                     }
                 } catch {
-                    // Fallback
                     ctx.fillStyle = '#ffffff';
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    if (overlayMode === 'split' && imgB && imgB.complete && imgB.naturalWidth > 0) {
-                        ctx.drawImage(imgB, imgW / 2, 0, imgW / 2, imgH);
+                    if (overlayMode === 'none') {
+                        ctx.drawImage(img, 0, 0, imgW, imgH);
                     }
-                    // full / right-half / none : canvas reste blanc.
                 }
 
                 drawLogic.saveHistory();
